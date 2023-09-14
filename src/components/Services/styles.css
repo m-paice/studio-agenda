@@ -1,0 +1,43 @@
+.container-services {
+  max-height: 400px;
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.container-services ul li {
+  list-style: none;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  height: 40px;
+  background-color: #eee;
+  color: #000;
+
+  padding: 2px 10px;
+  border-radius: 4px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.container-services ul {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.container-services ul li.selected {
+  background-color: green;
+  color: white;
+}
+
+.container-services p {
+  margin-left: 10px;
+  font-weight: bold;
+}

@@ -1,0 +1,24 @@
+.container-hour {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.container-hour p {
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+.container-hour p span {
+  font-size: 14px;
+  color: gray;
+}
+
+.wrapper-hour {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wrapper-hour button {
+}
