@@ -7,8 +7,8 @@ interface Props {
   defaultQuery?: object;
 }
 
-export const useRequestFindMany = ({ path, defaultQuery = {} }: Props) => {
-  const [response, setResponse] = useState(null);
+export function useRequestFindMany<T>({ path, defaultQuery = {} }: Props) {
+  const [response, setResponse] = useState<T[] | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -42,4 +42,4 @@ export const useRequestFindMany = ({ path, defaultQuery = {} }: Props) => {
     error,
     loading,
   };
-};
+}

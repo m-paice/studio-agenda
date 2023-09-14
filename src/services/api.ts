@@ -8,7 +8,7 @@ const nodeEnv = {
 
 export function api() {
   return axios.create({
-    baseURL: `${nodeEnv["development"]}/api/v1`,
+    baseURL: `${nodeEnv["production"]}/api/v1`,
     paramsSerializer: (params) => qs.stringify(params),
   });
 }

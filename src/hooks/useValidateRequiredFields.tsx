@@ -10,7 +10,7 @@ export const useValidateRequiredFields = ({ fields = [] }) => {
     }, {})
   );
 
-  const validate = (values) => {
+  const validate = (values: { [key: string]: string }) => {
     const validate = fields.filter((item) => {
       if (Array.isArray(values[item]) && !values[item].length) return true;
 

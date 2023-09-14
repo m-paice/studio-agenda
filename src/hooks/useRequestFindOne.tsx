@@ -8,8 +8,8 @@ interface Props {
   defaultQuery?: object;
 }
 
-export const useRequestFindOne = ({ path, id, defaultQuery = {} }: Props) => {
-  const [response, setResponse] = useState(null);
+export function useRequestFindOne<T>({ path, id, defaultQuery = {} }: Props) {
+  const [response, setResponse] = useState<T | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -43,4 +43,4 @@ export const useRequestFindOne = ({ path, id, defaultQuery = {} }: Props) => {
     error,
     loading,
   };
-};
+}

@@ -40,7 +40,7 @@ export function Home() {
     execute: execAccount,
     response: responseAccount,
     loading: loadingAccount,
-  } = useRequestFindOne({
+  } = useRequestFindOne<{ id: string; name: string }>({
     path: "/public/account",
     id: `${params.id}/info`,
   });
@@ -49,7 +49,7 @@ export function Home() {
     execute: execServices,
     response: responseServices,
     loading: loadingServices,
-  } = useRequestFindMany({
+  } = useRequestFindMany<Service>({
     path: `/public/account/${params.id}/services`,
   });
 
@@ -57,7 +57,7 @@ export function Home() {
     execute: execSchedules,
     response: responseSchedules,
     loading: loadingSchedules,
-  } = useRequestFindMany({
+  } = useRequestFindMany<{ id: string; scheduleAt: string }>({
     path: `/public/account/${params.id}/schedules`,
     defaultQuery: {
       where: {

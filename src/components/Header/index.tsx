@@ -1,7 +1,7 @@
 import "./styles.css";
 
 interface Props {
-  name: string;
+  name: string | undefined;
 }
 
 export function Header({ name }: Props) {
