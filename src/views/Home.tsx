@@ -12,7 +12,26 @@ import { useRequestFindMany } from "../hooks/useRequestFindMany";
 import { useRequestFindOne } from "../hooks/useRequestFindOne";
 import { useTimeSlots } from "../hooks/useTimeSlots";
 import { useRequestCreate } from "../hooks/useRequestCreate";
+import { days } from "../constants/days";
+import { useTransformTime } from "../hooks/useTransformTime";
 
+export interface Account {
+  id: string;
+  name: string;
+  config: {
+    startAt: string;
+    endAt: string;
+    days: {
+      dom: boolean;
+      seg: boolean;
+      ter: boolean;
+      qua: boolean;
+      qui: boolean;
+      sex: boolean;
+      sab: boolean;
+    };
+  };
+}
 export interface Service {
   id: string;
   name: string;
@@ -40,7 +59,7 @@ export function Home() {
     execute: execAccount,
     response: responseAccount,
     loading: loadingAccount,
-  } = useRequestFindOne<{ id: string; name: string }>({
+  } = useRequestFindOne<Account>({
     path: "/public/account",
     id: `${params.id}/info`,
   });
@@ -126,10 +145,24 @@ export function Home() {
     execCreateSchedules(payload);
   };
 
+  const startAt = useTransformTime({
+    time: responseAccount?.config.startAt
+      ? responseAccount?.config.startAt
+      : "07:00",
+  });
+
+  const endAt = useTransformTime({
+    time: responseAccount?.config.endAt
+      ? responseAccount?.config.endAt
+      : "20:00",
+  });
+
   const { timeSlots } = useTimeSlots({
     payload: (responseSchedules || []).map((item) =>
       format(new Date(item.scheduleAt), "HH:mm")
     ),
+    startAt,
+    endAt,
   });
 
   return (
@@ -158,6 +191,13 @@ export function Home() {
           labelText="Dia"
           value={fields.date}
           onSelect={(date) => date && setFields({ ...fields, date })}
+          disable={
+            responseAccount?.config.days
+              ? Object.entries(responseAccount?.config.days)
+                  .filter(([_, value]) => Boolean(value))
+                  .map(([key]) => days[key])
+              : []
+          }
         />
 
         <Hours

@@ -51,12 +51,14 @@ button.success,
 button.success:hover {
   background-color: green;
   border-color: white;
+  color: white;
 }
 
 button.danger,
 button.danger:hover {
   background-color: red;
   border-color: white;
+  color: white;
 }
 
 button:hover {

@@ -17,7 +17,7 @@ export function InputDate({
   onSelect,
 }: Props) {
   const isTuesday = (date: Date) => {
-    return !disable.includes(date.getDay());
+    return disable.includes(date.getDay());
   };
 
   return (
