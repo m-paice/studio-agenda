@@ -1,7 +1,9 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Provider } from "react-alert";
 import { Home } from "./views/Home";
 
 import "react-datepicker/dist/react-datepicker.css";
+import { AlertTemplate } from "./components/AlertTemplate";
 
 const router = createBrowserRouter([
   {
@@ -12,10 +14,9 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <div>
-      {" "}
+    <Provider template={AlertTemplate} position="top right" timeout={5000}>
       <RouterProvider router={router} />
-    </div>
+    </Provider>
   );
 }
 

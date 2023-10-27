@@ -6,12 +6,12 @@ interface Props {
   path: string;
 }
 
-export const useRequestCreate = ({ path }: Props) => {
-  const [response, setResponse] = useState(null);
+export function useRequestCreate<T>({ path }: Props) {
+  const [response, setResponse] = useState<T | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const execute = (payload: any, params = {}) => {
+  const execute = (payload: T, params = {}) => {
     setLoading(true);
 
     api()
@@ -38,4 +38,4 @@ export const useRequestCreate = ({ path }: Props) => {
     error,
     loading,
   };
-};
+}

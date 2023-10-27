@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { format, startOfDay, endOfDay, setHours, setMinutes } from "date-fns";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import { useAlert } from "react-alert";
 
 import { Header } from "../components/Header";
 import { Hours } from "../components/Hours";
@@ -16,6 +17,7 @@ import { useTimeSlots } from "../hooks/useTimeSlots";
 import { useRequestCreate } from "../hooks/useRequestCreate";
 import { days } from "../constants/days";
 import { useTransformTime } from "../hooks/useTransformTime";
+import { LabelError } from "../components/LabelError";
 
 export interface Account {
   id: string;
@@ -42,6 +44,7 @@ export interface Service {
 
 interface Fields {
   name: string;
+  cellPhone: string;
   date: Date;
   services: string[];
   hour: string;
@@ -49,10 +52,11 @@ interface Fields {
 
 export function Home() {
   const params = useParams<{ id: string }>();
+  const alert = useAlert();
 
   const validationSchema = Yup.object({
     name: Yup.string().required("O nome é obrigatório"),
-    date: Yup.date().required("A data é obrigatória"),
+    date: Yup.string().required("A data é obrigatória"),
     hour: Yup.string().required("A hora é obrigatória"),
     services: Yup.array().min(1, "Selecione pelo menos um serviço"),
   });
@@ -60,6 +64,7 @@ export function Home() {
   const formik = useFormik<Fields>({
     initialValues: {
       name: "",
+      cellPhone: "",
       date: new Date(),
       services: [],
       hour: "",
@@ -77,6 +82,7 @@ export function Home() {
 
       const payload = {
         shortName: values.name,
+        cellPhone: values.cellPhone,
         services: values.services.map((serviceId) => ({
           id: serviceId,
           isPackage: false,
@@ -105,28 +111,48 @@ export function Home() {
     path: `/public/account/${params.id}/services`,
   });
 
-  const { response: responseSchedules, loading: loadingSchedules } =
-    useRequestFindMany<{ id: string; scheduleAt: string }>({
-      path: `/public/account/${params.id}/schedules`,
-      defaultQuery: {
-        where: {
-          scheduleAt: {
-            $between: [
-              startOfDay(formik.values.date),
-              endOfDay(formik.values.date),
-            ],
-          },
+  const {
+    response: responseSchedules,
+    loading: loadingSchedules,
+    execute: execSchedules,
+  } = useRequestFindMany<{ id: string; scheduleAt: string }>({
+    path: `/public/account/${params.id}/schedules`,
+    defaultQuery: {
+      where: {
+        scheduleAt: {
+          $between: [
+            startOfDay(formik.values.date),
+            endOfDay(formik.values.date),
+          ],
         },
       },
-    });
+    },
+  });
 
-  const { execute: execCreateSchedules, loading: loadingCreateSchedule } =
-    useRequestCreate({ path: `/public/account/${params.id}/schedules` });
+  const {
+    execute: execCreateSchedules,
+    loading: loadingCreateSchedule,
+    response: responseCreated,
+  } = useRequestCreate({ path: `/public/account/${params.id}/schedules` });
 
   useEffect(() => {
     execServices();
     execAccount();
   }, []);
+
+  useEffect(() => {
+    execSchedules();
+    if (formik.values.hour) formik.setFieldValue("hour", "");
+  }, [formik.values.date]);
+
+  useEffect(() => {
+    if (responseCreated) {
+      formik.resetForm();
+      alert.success("Agendamento criado com sucesso!");
+      execSchedules();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [responseCreated]);
 
   const startAt = useTransformTime({
     time: responseAccount?.config.startAt
@@ -168,6 +194,15 @@ export function Home() {
           value={formik.values.name}
           onChange={formik.handleChange}
         />
+        <LabelError message={formik.errors.name} />
+
+        <Input
+          placeholder="Digite seu telefone"
+          labelText="Telefone"
+          name="cellPhone"
+          value={formik.values.cellPhone}
+          onChange={formik.handleChange}
+        />
 
         <InputDate
           labelText="Dia"
@@ -189,6 +224,7 @@ export function Home() {
           value={formik.values.hour}
           onSelect={(item) => formik.setFieldValue("hour", item)}
         />
+        <LabelError message={formik.errors.hour} />
 
         <Services
           values={formik.values.services}
@@ -200,8 +236,11 @@ export function Home() {
             formik.setFieldValue("services", services);
           }}
         />
+        <LabelError message={formik.errors.services} />
 
-        <button type="submit">Agendar</button>
+        <button type="submit" disabled={loadingCreateSchedule}>
+          Agendar
+        </button>
       </form>
     </div>
   );
