@@ -1,6 +1,8 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { format, startOfDay, endOfDay, setHours, setMinutes } from "date-fns";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 
 import { Header } from "../components/Header";
 import { Hours } from "../components/Hours";
@@ -48,11 +50,42 @@ interface Fields {
 export function Home() {
   const params = useParams<{ id: string }>();
 
-  const [fields, setFields] = useState<Fields>({
-    name: "",
-    date: new Date(),
-    services: [],
-    hour: "",
+  const validationSchema = Yup.object({
+    name: Yup.string().required("O nome é obrigatório"),
+    date: Yup.date().required("A data é obrigatória"),
+    hour: Yup.string().required("A hora é obrigatória"),
+    services: Yup.array().min(1, "Selecione pelo menos um serviço"),
+  });
+
+  const formik = useFormik<Fields>({
+    initialValues: {
+      name: "",
+      date: new Date(),
+      services: [],
+      hour: "",
+    },
+    validationSchema: validationSchema,
+    onSubmit: (values) => {
+      const [hour, minute] = values.hour.split(":");
+
+      const scheduleAt = new Date(
+        format(
+          setMinutes(setHours(values.date, Number(hour)), Number(minute)),
+          "YYY/MM/dd HH:mm:ss"
+        )
+      );
+
+      const payload = {
+        shortName: values.name,
+        services: values.services.map((serviceId) => ({
+          id: serviceId,
+          isPackage: false,
+        })),
+        scheduleAt,
+      };
+
+      execCreateSchedules(payload);
+    },
   });
 
   const {
@@ -72,20 +105,20 @@ export function Home() {
     path: `/public/account/${params.id}/services`,
   });
 
-  const {
-    execute: execSchedules,
-    response: responseSchedules,
-    loading: loadingSchedules,
-  } = useRequestFindMany<{ id: string; scheduleAt: string }>({
-    path: `/public/account/${params.id}/schedules`,
-    defaultQuery: {
-      where: {
-        scheduleAt: {
-          $between: [startOfDay(fields.date), endOfDay(fields.date)],
+  const { response: responseSchedules, loading: loadingSchedules } =
+    useRequestFindMany<{ id: string; scheduleAt: string }>({
+      path: `/public/account/${params.id}/schedules`,
+      defaultQuery: {
+        where: {
+          scheduleAt: {
+            $between: [
+              startOfDay(formik.values.date),
+              endOfDay(formik.values.date),
+            ],
+          },
         },
       },
-    },
-  });
+    });
 
   const { execute: execCreateSchedules, loading: loadingCreateSchedule } =
     useRequestCreate({ path: `/public/account/${params.id}/schedules` });
@@ -94,56 +127,6 @@ export function Home() {
     execServices();
     execAccount();
   }, []);
-
-  useEffect(() => {
-    execSchedules();
-    if (fields.hour) setFields({ ...fields, hour: "" });
-  }, [fields.date]);
-
-  const handleChangeField = ({
-    key,
-    value,
-  }: {
-    key: string;
-    value: string;
-  }) => {
-    setFields({ ...fields, [key]: value });
-  };
-
-  const handleChangeService = ({ id }: { id: string }) => {
-    if (fields.services.includes(id)) {
-      return setFields({
-        ...fields,
-        services: fields.services.filter((serviceId) => serviceId !== id),
-      });
-    }
-
-    setFields({ ...fields, services: [...fields.services, id] });
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const [hour, minute] = fields.hour.split(":");
-
-    const scheduleAt = new Date(
-      format(
-        setMinutes(setHours(fields.date, Number(hour)), Number(minute)),
-        "YYY/MM/dd HH:mm:ss"
-      )
-    );
-
-    const payload = {
-      shortName: fields.name,
-      services: fields.services.map((serviceId) => ({
-        id: serviceId,
-        isPackage: false,
-      })),
-      scheduleAt,
-    };
-
-    execCreateSchedules(payload);
-  };
 
   const startAt = useTransformTime({
     time: responseAccount?.config.startAt
@@ -177,23 +160,24 @@ export function Home() {
       />
       <Header name={responseAccount?.name} />
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={formik.handleSubmit}>
         <Input
           placeholder="Digite seu nome"
           labelText="Nome"
-          value={fields.name}
-          onChange={(event) =>
-            handleChangeField({ key: "name", value: event.target.value })
-          }
+          name="name"
+          value={formik.values.name}
+          onChange={formik.handleChange}
         />
 
         <InputDate
           labelText="Dia"
-          value={fields.date}
-          onSelect={(date) => date && setFields({ ...fields, date })}
+          name="date"
+          value={formik.values.date}
+          onSelect={(date) => date && formik.setFieldValue("date", date)}
           disable={
             responseAccount?.config.days
               ? Object.entries(responseAccount?.config.days)
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   .filter(([_, value]) => Boolean(value))
                   .map(([key]) => days[key])
               : []
@@ -202,14 +186,19 @@ export function Home() {
 
         <Hours
           items={timeSlots}
-          value={fields.hour}
-          onSelect={(item) => setFields({ ...fields, hour: item })}
+          value={formik.values.hour}
+          onSelect={(item) => formik.setFieldValue("hour", item)}
         />
 
         <Services
-          values={fields.services}
+          values={formik.values.services}
           services={responseServices || []}
-          onSelect={(serviceId) => handleChangeService({ id: serviceId })}
+          onSelect={(serviceId: string) => {
+            const services = formik.values.services.includes(serviceId)
+              ? formik.values.services.filter((id) => id !== serviceId)
+              : [...formik.values.services, serviceId];
+            formik.setFieldValue("services", services);
+          }}
         />
 
         <button type="submit">Agendar</button>

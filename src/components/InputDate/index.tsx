@@ -8,6 +8,7 @@ interface Props {
   value: Date;
   disable?: number[];
   onSelect: (date: Date | null) => void;
+  name: string;
 }
 
 export function InputDate({
@@ -15,6 +16,7 @@ export function InputDate({
   value,
   disable = [0, 2], // domingo e terça
   onSelect,
+  name,
 }: Props) {
   const isTuesday = (date: Date) => {
     return disable.includes(date.getDay());
@@ -29,6 +31,7 @@ export function InputDate({
         onChange={(date) => onSelect(date)}
         filterDate={isTuesday}
         locale={ptBR}
+        name={name}
       />
     </div>
   );
