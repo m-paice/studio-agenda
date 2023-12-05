@@ -9,7 +9,7 @@ export interface TimeSlotsItem {
   schedule: boolean;
 }
 
-export function useTimeSlots({ startAt = 7, endAt = 20.5, payload }: Props) {
+export function handleTimeSlots({ startAt = 7, endAt = 20.5, payload }: Props) {
   const startTime = startAt * 60;
   const endTime = endAt * 60;
   const interval = 30;

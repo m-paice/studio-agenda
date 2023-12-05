@@ -1,6 +1,13 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { format, startOfDay, endOfDay, setHours, setMinutes } from "date-fns";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  setHours,
+  setMinutes,
+  getDay,
+} from "date-fns";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useAlert } from "react-alert";
@@ -13,11 +20,20 @@ import { InputDate } from "../components/InputDate";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { useRequestFindMany } from "../hooks/useRequestFindMany";
 import { useRequestFindOne } from "../hooks/useRequestFindOne";
-import { useTimeSlots } from "../hooks/useTimeSlots";
+import { handleTimeSlots } from "../hooks/useTimeSlots";
 import { useRequestCreate } from "../hooks/useRequestCreate";
 import { days } from "../constants/days";
-import { useTransformTime } from "../hooks/useTransformTime";
+import { transformTime } from "../hooks/useTransformTime";
 import { LabelError } from "../components/LabelError";
+
+export type DayNames =
+  | "DOMINGO"
+  | "SEGUNDA-FEIRA"
+  | "TERÇA-FEIRA"
+  | "QUARTA-FEIRA"
+  | "QUINTA-FEIRA"
+  | "SEXTA-FEIRA"
+  | "SABADO";
 
 export interface Account {
   id: string;
@@ -34,6 +50,7 @@ export interface Account {
       sex: boolean;
       sab: boolean;
     };
+    weekHours: { [key: string]: string[][] };
   };
 }
 export interface Service {
@@ -49,6 +66,16 @@ interface Fields {
   services: string[];
   hour: string;
 }
+
+const daysOfWeek: DayNames[] = [
+  "DOMINGO",
+  "SEGUNDA-FEIRA",
+  "TERÇA-FEIRA",
+  "QUARTA-FEIRA",
+  "QUINTA-FEIRA",
+  "SEXTA-FEIRA",
+  "SABADO",
+];
 
 export function Home() {
   const params = useParams<{ id: string }>();
@@ -154,25 +181,32 @@ export function Home() {
     }
   }, [responseCreated]);
 
-  const startAt = useTransformTime({
-    time: responseAccount?.config.startAt
-      ? responseAccount?.config.startAt
-      : "07:00",
+  const daySelected = formik?.values?.date
+    ? getDay(formik.values.date)
+    : getDay(new Date());
+
+  const dayWeek: DayNames = daysOfWeek[daySelected];
+  const hours = responseAccount?.config?.weekHours?.[dayWeek] || [];
+
+  const slots = hours.map((item) => {
+    const [startAt, endAt] = item;
+
+    const startTime = transformTime({ time: startAt });
+    const endTime = transformTime({ time: endAt });
+
+    const { timeSlots } = handleTimeSlots({
+      payload: (responseSchedules || []).map((item) =>
+        format(new Date(item.scheduleAt), "HH:mm")
+      ),
+      startAt: startTime,
+      endAt: endTime,
+    });
+
+    return timeSlots;
   });
 
-  const endAt = useTransformTime({
-    time: responseAccount?.config.endAt
-      ? responseAccount?.config.endAt
-      : "20:00",
-  });
-
-  const { timeSlots } = useTimeSlots({
-    payload: (responseSchedules || []).map((item) =>
-      format(new Date(item.scheduleAt), "HH:mm")
-    ),
-    startAt,
-    endAt,
-  });
+  const timeDataSlots =
+    Array.isArray(slots) && slots.length ? [...slots[0], ...slots[1]] : [];
 
   return (
     <div>
@@ -220,7 +254,7 @@ export function Home() {
         />
 
         <Hours
-          items={timeSlots}
+          items={timeDataSlots}
           value={formik.values.hour}
           onSelect={(item) => formik.setFieldValue("hour", item)}
         />
