@@ -142,7 +142,12 @@ export function Home() {
     response: responseSchedules,
     loading: loadingSchedules,
     execute: execSchedules,
-  } = useRequestFindMany<{ id: string; scheduleAt: string }>({
+  } = useRequestFindMany<{
+    id: string;
+    scheduleAt: string;
+    shortName: string;
+    user: { name: string };
+  }>({
     path: `/public/account/${params.id}/schedules`,
     defaultQuery: {
       where: {
@@ -188,6 +193,15 @@ export function Home() {
   const dayWeek: DayNames = daysOfWeek[daySelected];
   const hours = responseAccount?.config?.weekHours?.[dayWeek] || [];
 
+  const schedulesHours = (responseSchedules || []).map((item) =>
+    format(new Date(item.scheduleAt), "HH:mm")
+  );
+
+  const schedulesWithUserName = (responseSchedules || []).map((item) => ({
+    time: format(new Date(item.scheduleAt), "HH:mm"),
+    username: item?.shortName || item?.user?.name || "",
+  }));
+
   const slots = hours.map((item) => {
     const [startAt, endAt] = item;
 
@@ -195,9 +209,7 @@ export function Home() {
     const endTime = transformTime({ time: endAt });
 
     const { timeSlots } = handleTimeSlots({
-      payload: (responseSchedules || []).map((item) =>
-        format(new Date(item.scheduleAt), "HH:mm")
-      ),
+      payload: schedulesHours,
       startAt: startTime,
       endAt: endTime,
     });
@@ -257,6 +269,7 @@ export function Home() {
           items={timeDataSlots}
           value={formik.values.hour}
           onSelect={(item) => formik.setFieldValue("hour", item)}
+          schedulesWithUserName={schedulesWithUserName}
         />
         <LabelError message={formik.errors.hour} />
 
@@ -272,7 +285,7 @@ export function Home() {
         />
         <LabelError message={formik.errors.services} />
 
-        <button type="submit" disabled={loadingCreateSchedule}>
+        <button className="full" type="submit" disabled={loadingCreateSchedule}>
           Agendar
         </button>
       </form>
