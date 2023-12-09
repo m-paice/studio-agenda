@@ -25,6 +25,8 @@ import { useRequestCreate } from "../hooks/useRequestCreate";
 import { days } from "../constants/days";
 import { transformTime } from "../hooks/useTransformTime";
 import { LabelError } from "../components/LabelError";
+import { formatarTelefone } from "../utils/formatNumber";
+import { calculateTotalAverageTime } from "../utils/calculateAverageTime";
 
 export type DayNames =
   | "DOMINGO"
@@ -57,13 +59,22 @@ export interface Service {
   id: string;
   name: string;
   price: string;
+  averageTime: string;
+}
+
+export interface Schedules {
+  id: string;
+  scheduleAt: string;
+  shortName: string;
+  user: { name: string };
+  averageTime: number;
 }
 
 interface Fields {
   name: string;
   cellPhone: string;
   date: Date;
-  services: string[];
+  services: Service[];
   hour: string;
 }
 
@@ -83,6 +94,9 @@ export function Home() {
 
   const validationSchema = Yup.object({
     name: Yup.string().required("O nome é obrigatório"),
+    cellPhone: Yup.string()
+      .required("O telefone é obrigatório")
+      .matches(/^\(\d{2}\) \d{4,5}-\d{4}$/, "Formato inválido"),
     date: Yup.string().required("A data é obrigatória"),
     hour: Yup.string().required("A hora é obrigatória"),
     services: Yup.array().min(1, "Selecione pelo menos um serviço"),
@@ -109,12 +123,13 @@ export function Home() {
 
       const payload = {
         shortName: values.name,
-        cellPhone: values.cellPhone,
-        services: values.services.map((serviceId) => ({
-          id: serviceId,
+        cellPhone: values.cellPhone.replace(/\D/g, ""),
+        services: values.services.map((service) => ({
+          id: service.id,
           isPackage: false,
         })),
         scheduleAt,
+        averageTime: calculateTotalAverageTime(values.services),
       };
 
       execCreateSchedules(payload);
@@ -142,12 +157,7 @@ export function Home() {
     response: responseSchedules,
     loading: loadingSchedules,
     execute: execSchedules,
-  } = useRequestFindMany<{
-    id: string;
-    scheduleAt: string;
-    shortName: string;
-    user: { name: string };
-  }>({
+  } = useRequestFindMany<Schedules>({
     path: `/public/account/${params.id}/schedules`,
     defaultQuery: {
       where: {
@@ -193,10 +203,6 @@ export function Home() {
   const dayWeek: DayNames = daysOfWeek[daySelected];
   const hours = responseAccount?.config?.weekHours?.[dayWeek] || [];
 
-  const schedulesHours = (responseSchedules || []).map((item) =>
-    format(new Date(item.scheduleAt), "HH:mm")
-  );
-
   const schedulesWithUserName = (responseSchedules || []).map((item) => ({
     time: format(new Date(item.scheduleAt), "HH:mm"),
     username: item?.shortName || item?.user?.name || "",
@@ -207,6 +213,11 @@ export function Home() {
 
     const startTime = transformTime({ time: startAt });
     const endTime = transformTime({ time: endAt });
+
+    const schedulesHours = (responseSchedules || []).map((item) => ({
+      scheduleAt: format(new Date(item.scheduleAt), "HH:mm"),
+      averageTime: item.averageTime,
+    }));
 
     const { timeSlots } = handleTimeSlots({
       payload: schedulesHours,
@@ -219,6 +230,11 @@ export function Home() {
 
   const timeDataSlots =
     Array.isArray(slots) && slots.length ? [...slots[0], ...slots[1]] : [];
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const telefoneFormatado = formatarTelefone(e.target.value);
+    formik.setFieldValue("cellPhone", telefoneFormatado);
+  };
 
   return (
     <div>
@@ -247,8 +263,9 @@ export function Home() {
           labelText="Telefone"
           name="cellPhone"
           value={formik.values.cellPhone}
-          onChange={formik.handleChange}
+          onChange={handleChange}
         />
+        <LabelError message={formik.errors.cellPhone} />
 
         <InputDate
           labelText="Dia"
@@ -276,10 +293,12 @@ export function Home() {
         <Services
           values={formik.values.services}
           services={responseServices || []}
-          onSelect={(serviceId: string) => {
-            const services = formik.values.services.includes(serviceId)
-              ? formik.values.services.filter((id) => id !== serviceId)
-              : [...formik.values.services, serviceId];
+          onSelect={(service) => {
+            const services = formik.values.services.some(
+              (item) => item.id === service.id
+            )
+              ? formik.values.services.filter((item) => item.id !== service.id)
+              : [...formik.values.services, service];
             formik.setFieldValue("services", services);
           }}
         />

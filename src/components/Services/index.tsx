@@ -3,9 +3,9 @@ import { Service } from "../../views/Home";
 import "./styles.css";
 
 interface Props {
-  values: string[];
+  values: Service[];
   services: Service[];
-  onSelect(serviceId: string): void;
+  onSelect(service: Service): void;
 }
 
 export function Services({ values, services, onSelect }: Props) {
@@ -16,8 +16,10 @@ export function Services({ values, services, onSelect }: Props) {
         {services.map((item) => (
           <li
             key={item.id}
-            className={values.includes(item.id) ? "selected" : ""}
-            onClick={() => onSelect(item.id)}
+            className={
+              values.some((value) => value.id === item.id) ? "selected" : ""
+            }
+            onClick={() => onSelect(item)}
           >
             <span>{item.name}</span>
             <span>
