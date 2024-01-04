@@ -1,23 +1,42 @@
-import { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { format, startOfDay, endOfDay, setHours, setMinutes } from "date-fns";
-import { useFormik } from "formik";
+import { useFormik, Field } from "formik";
 import * as Yup from "yup";
 import { useAlert } from "react-alert";
 
 import { Header } from "../components/Header";
 import { Hours } from "../components/Hours";
-import { Input } from "../components/Input";
 import { Services } from "../components/Services";
-import { InputDate } from "../components/InputDate";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { useRequestFindMany } from "../hooks/useRequestFindMany";
 import { useRequestFindOne } from "../hooks/useRequestFindOne";
 import { useTimeSlots } from "../hooks/useTimeSlots";
 import { useRequestCreate } from "../hooks/useRequestCreate";
-import { days } from "../constants/days";
 import { useTransformTime } from "../hooks/useTransformTime";
 import { LabelError } from "../components/LabelError";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Container,
+  Input,
+  InputLabel,
+  TextField,
+  FormControl,
+} from "@mui/material";
+import { blue, pink } from "@mui/material/colors";
+
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+
+//import "dayjs/locale/ptBr"
+import ptBR from "date-fns/locale/pt-BR";
+import { DemoContainer, DemoItem } from "@mui/x-date-pickers/internals/demo";
+import { DesktopDatePicker } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { IMaskInput } from "react-imask";
 
 export interface Account {
   id: string;
@@ -48,6 +67,7 @@ interface Fields {
   date: Date;
   services: string[];
   hour: string;
+  onChange: (event: { target: { cellPhone: string; value: string } }) => void;
 }
 
 export function Home() {
@@ -56,6 +76,7 @@ export function Home() {
 
   const validationSchema = Yup.object({
     name: Yup.string().required("O nome é obrigatório"),
+    cellPhone: Yup.string().required("O telefone é obrigatório"),
     date: Yup.string().required("A data é obrigatória"),
     hour: Yup.string().required("A hora é obrigatória"),
     services: Yup.array().min(1, "Selecione pelo menos um serviço"),
@@ -68,6 +89,12 @@ export function Home() {
       date: new Date(),
       services: [],
       hour: "",
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      onChange: function (event: {
+        target: { cellPhone: string; value: string };
+      }): void {
+        throw new Error("Function not implemented.");
+      },
     },
     validationSchema: validationSchema,
     onSubmit: (values) => {
@@ -174,74 +201,133 @@ export function Home() {
     endAt,
   });
 
-  return (
-    <div>
-      <LoadingOverlay
-        visible={
-          loadingAccount ||
-          loadingSchedules ||
-          loadingServices ||
-          loadingCreateSchedule
-        }
-      />
-      <Header name={responseAccount?.name} />
-
-      <form onSubmit={formik.handleSubmit}>
-        <Input
-          placeholder="Digite seu nome"
-          labelText="Nome"
-          name="name"
-          value={formik.values.name}
-          onChange={formik.handleChange}
-        />
-        <LabelError message={formik.errors.name} />
-
-        <Input
-          placeholder="Digite seu telefone"
-          labelText="Telefone"
+  const TextMaskCustom = React.forwardRef<HTMLInputElement, Fields>(
+    function TextMaskCustom(props, ref) {
+      const { onChange, ...other } = props;
+      return (
+        <IMaskInput
+          {...other}
+          mask="(00) 00000-0000"
+          inputRef={ref}
           name="cellPhone"
-          value={formik.values.cellPhone}
-          onChange={formik.handleChange}
-        />
-
-        <InputDate
-          labelText="Dia"
-          name="date"
-          value={formik.values.date}
-          onSelect={(date) => date && formik.setFieldValue("date", date)}
-          disable={
-            responseAccount?.config.days
-              ? Object.entries(responseAccount?.config.days)
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  .filter(([_, value]) => Boolean(value))
-                  .map(([key]) => days[key])
-              : []
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onAccept={(value: any) =>
+            onChange({ target: { cellPhone: props.cellPhone, value } })
           }
+          overwrite
         />
+      );
+    }
+  );
 
-        <Hours
-          items={timeSlots}
-          value={formik.values.hour}
-          onSelect={(item) => formik.setFieldValue("hour", item)}
-        />
-        <LabelError message={formik.errors.hour} />
+  return (
+    <Container>
+      <Box sx={{ paddingTop: 3, backgroundColor: "#003049" }}>
+        <Box>
+          <img
+            style={{
+              paddingBottom: 5,
+              margin: "auto",
+              display: "block",
+            }}
+            src="src/assets/meu-petrecho.png"
+          />
+        </Box>
+        <Card>
+          <LoadingOverlay
+            visible={
+              loadingAccount ||
+              loadingSchedules ||
+              loadingServices ||
+              loadingCreateSchedule
+            }
+          />
+          <CardHeader
+            title="Faça seu agendamento"
+            sx={{
+              fontSize: 18,
+              backgroundColor: pink[900],
+              color: blue[50],
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+            }}
+          />
+          <CardContent>
+            <Header name={responseAccount?.name} />
 
-        <Services
-          values={formik.values.services}
-          services={responseServices || []}
-          onSelect={(serviceId: string) => {
-            const services = formik.values.services.includes(serviceId)
-              ? formik.values.services.filter((id) => id !== serviceId)
-              : [...formik.values.services, serviceId];
-            formik.setFieldValue("services", services);
-          }}
-        />
-        <LabelError message={formik.errors.services} />
+            <form onSubmit={formik.handleSubmit}>
+              <TextField
+                label="Nome"
+                name="name"
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                color="primary"
+                placeholder="Digite o nome"
+              />
+              <LabelError message={formik.errors.name} />
+              <TextField
+                id="formatted-cellPhone"
+                name="cellPhone"
+                label="Telefone"
+                placeholder="Digite seu telefone"
+                color="primary"
+                value={formik.values.cellPhone}
+                //onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                InputProps={{
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  inputComponent: TextMaskCustom as any,
+                }}
+              />
+              <LabelError message={formik.errors.cellPhone} />
 
-        <button type="submit" disabled={loadingCreateSchedule}>
-          Agendar
-        </button>
-      </form>
-    </div>
+              <LocalizationProvider
+                dateAdapter={AdapterDateFns}
+                adapterLocale={ptBR}
+              >
+                <DemoContainer components={["DesktopDatePicker"]}>
+                  <DemoItem>
+                    <DesktopDatePicker
+                      label="Dia do agendamento"
+                      name="date"
+                      value={formik.values.date}
+                      //format="DD/MMMM/YYYY"
+                      onChange={(date) =>
+                        date && formik.setFieldValue("date", date)
+                      }
+                    ></DesktopDatePicker>
+                  </DemoItem>
+                </DemoContainer>
+              </LocalizationProvider>
+              <Hours
+                items={timeSlots}
+                value={formik.values.hour}
+                onSelect={(item) => formik.setFieldValue("hour", item)}
+              />
+              <LabelError message={formik.errors.hour} />
+              <Services
+                values={formik.values.services}
+                services={responseServices || []}
+                onSelect={(serviceId: string) => {
+                  const services = formik.values.services.includes(serviceId)
+                    ? formik.values.services.filter((id) => id !== serviceId)
+                    : [...formik.values.services, serviceId];
+                  formik.setFieldValue("services", services);
+                }}
+              />
+              <LabelError message={formik.errors.services} />
+              <Button
+                variant="contained"
+                type="submit"
+                disabled={loadingCreateSchedule}
+              >
+                Agendar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </Box>
+    </Container>
   );
 }
