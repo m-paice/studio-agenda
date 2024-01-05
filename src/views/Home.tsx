@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { CSSProperties, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
   format,
@@ -7,22 +7,20 @@ import {
   setHours,
   setMinutes,
   getDay,
+  addDays,
 } from "date-fns";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { useAlert } from "react-alert";
 
 import { Header } from "../components/Header";
 import { Hours } from "../components/Hours";
 import { Input } from "../components/Input";
 import { Services } from "../components/Services";
-import { InputDate } from "../components/InputDate";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { useRequestFindMany } from "../hooks/useRequestFindMany";
 import { useRequestFindOne } from "../hooks/useRequestFindOne";
 import { handleTimeSlots } from "../hooks/useTimeSlots";
 import { useRequestCreate } from "../hooks/useRequestCreate";
-import { days } from "../constants/days";
 import { transformTime } from "../hooks/useTransformTime";
 import { LabelError } from "../components/LabelError";
 import { formatarTelefone } from "../utils/formatNumber";
@@ -90,7 +88,6 @@ const daysOfWeek: DayNames[] = [
 
 export function Home() {
   const params = useParams<{ id: string }>();
-  const alert = useAlert();
 
   const validationSchema = Yup.object({
     name: Yup.string().required("O nome é obrigatório"),
@@ -190,7 +187,7 @@ export function Home() {
   useEffect(() => {
     if (responseCreated) {
       formik.resetForm();
-      alert.success("Agendamento criado com sucesso!");
+
       execSchedules();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -202,6 +199,8 @@ export function Home() {
 
   const dayWeek: DayNames = daysOfWeek[daySelected];
   const hours = responseAccount?.config?.weekHours?.[dayWeek] || [];
+  const enableDays: { [key: string]: boolean } =
+    responseAccount?.config?.days || {};
 
   const schedulesWithUserName = (responseSchedules || []).map((item) => ({
     time: format(new Date(item.scheduleAt), "HH:mm"),
@@ -267,20 +266,44 @@ export function Home() {
         />
         <LabelError message={formik.errors.cellPhone} />
 
-        <InputDate
-          labelText="Dia"
-          name="date"
-          value={formik.values.date}
-          onSelect={(date) => date && formik.setFieldValue("date", date)}
-          disable={
-            responseAccount?.config.days
-              ? Object.entries(responseAccount?.config.days)
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  .filter(([_, value]) => Boolean(value))
-                  .map(([key]) => days[key])
-              : []
-          }
-        />
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 10 }}
+        >
+          {Array.from({ length: 7 }).map((_, index) => {
+            const currentDay = new Date().getDay();
+
+            const dia =
+              currentDay + index < 7
+                ? currentDay + index
+                : currentDay + index - 7;
+
+            const data = format(addDays(new Date(), index), "dd");
+            const dayName = daysOfWeek[dia].slice(0, 3);
+
+            return (
+              <div
+                key={index}
+                onClick={() => {
+                  if (!enableDays[dayName.toLocaleLowerCase()]) return;
+                  formik.setFieldValue("date", addDays(new Date(), index));
+                }}
+                style={{
+                  ...styles.days,
+                  background:
+                    formik.values.date?.getDate() ===
+                    addDays(new Date(), index).getDate()
+                      ? "green"
+                      : enableDays[dayName.toLocaleLowerCase()] === false
+                      ? "red"
+                      : " ",
+                }}
+              >
+                <span>{dayName}</span>
+                <span>{data}</span>
+              </div>
+            );
+          })}
+        </div>
 
         <Hours
           items={timeDataSlots}
@@ -311,3 +334,17 @@ export function Home() {
     </div>
   );
 }
+
+const styles: { days: CSSProperties } = {
+  days: {
+    border: "1px solid",
+    borderRadius: "10px",
+    width: "45px",
+    height: "80px",
+    cursor: "pointe",
+    display: "flex",
+    justifyContent: "center",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+};

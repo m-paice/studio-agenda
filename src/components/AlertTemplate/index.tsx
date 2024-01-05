@@ -1,5 +1,4 @@
 import React from "react";
-import { AlertTemplateProps } from "react-alert";
 
 import InfoIcon from "./icons/InfoIcon";
 import SuccessIcon from "./icons/SuccessIcon";
@@ -20,11 +19,7 @@ const alertStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-export const AlertTemplate = ({
-  message,
-  options,
-  style,
-}: AlertTemplateProps) => {
+export const AlertTemplate = ({ message, options, style }) => {
   return (
     <div style={{ ...alertStyle, ...style }}>
       {options.type === "info" && <InfoIcon />}
