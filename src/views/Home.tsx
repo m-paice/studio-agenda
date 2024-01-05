@@ -25,6 +25,7 @@ import { transformTime } from "../hooks/useTransformTime";
 import { LabelError } from "../components/LabelError";
 import { formatarTelefone } from "../utils/formatNumber";
 import { calculateTotalAverageTime } from "../utils/calculateAverageTime";
+import { toast } from "react-toastify";
 
 export type DayNames =
   | "DOMINGO"
@@ -130,6 +131,7 @@ export function Home() {
       };
 
       execCreateSchedules(payload);
+      toast.success("Agendamento realizado com sucesso");
     },
   });
 
