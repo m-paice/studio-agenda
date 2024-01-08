@@ -67,6 +67,7 @@ export interface Schedules {
   shortName: string;
   user: { name: string };
   averageTime: number;
+  status: string;
 }
 
 interface Fields {
@@ -204,10 +205,12 @@ export function Home() {
   const enableDays: { [key: string]: boolean } =
     responseAccount?.config?.days || {};
 
-  const schedulesWithUserName = (responseSchedules || []).map((item) => ({
-    time: format(new Date(item.scheduleAt), "HH:mm"),
-    username: item?.shortName || item?.user?.name || "",
-  }));
+  const schedulesWithUserName = (responseSchedules || [])
+    .filter((item) => item.status !== "canceled")
+    .map((item) => ({
+      time: format(new Date(item.scheduleAt), "HH:mm"),
+      username: item?.shortName || item?.user?.name || "",
+    }));
 
   const slots = hours.map((item) => {
     const [startAt, endAt] = item;
@@ -215,10 +218,12 @@ export function Home() {
     const startTime = transformTime({ time: startAt });
     const endTime = transformTime({ time: endAt });
 
-    const schedulesHours = (responseSchedules || []).map((item) => ({
-      scheduleAt: format(new Date(item.scheduleAt), "HH:mm"),
-      averageTime: item.averageTime,
-    }));
+    const schedulesHours = (responseSchedules || [])
+      .filter((item) => item.status !== "canceled")
+      .map((item) => ({
+        scheduleAt: format(new Date(item.scheduleAt), "HH:mm"),
+        averageTime: item.averageTime,
+      }));
 
     const { timeSlots } = handleTimeSlots({
       payload: schedulesHours,
