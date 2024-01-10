@@ -1,20 +1,18 @@
-import React, { useEffect, useState } from "react";
+import { CSSProperties, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { format, startOfDay, endOfDay, setHours, setMinutes } from "date-fns";
-import { useFormik, Field } from "formik";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  setHours,
+  setMinutes,
+  getDay,
+  addDays,
+} from "date-fns";
+import { toast } from "react-toastify";
+import { useFormik } from "formik";
 import * as Yup from "yup";
-import { useAlert } from "react-alert";
-
-import { Header } from "../components/Header";
-import { Hours } from "../components/Hours";
-import { Services } from "../components/Services";
-import { LoadingOverlay } from "../components/LoadingOverlay";
-import { useRequestFindMany } from "../hooks/useRequestFindMany";
-import { useRequestFindOne } from "../hooks/useRequestFindOne";
-import { useTimeSlots } from "../hooks/useTimeSlots";
-import { useRequestCreate } from "../hooks/useRequestCreate";
-import { useTransformTime } from "../hooks/useTransformTime";
-import { LabelError } from "../components/LabelError";
+import { blue, pink } from "@mui/material/colors";
 import {
   Box,
   Button,
@@ -22,21 +20,30 @@ import {
   CardContent,
   CardHeader,
   Container,
-  Input,
-  InputLabel,
   TextField,
-  FormControl,
 } from "@mui/material";
-import { blue, pink } from "@mui/material/colors";
 
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { Header } from "../components/Header";
+import { Hours } from "../components/Hours";
+import { Services } from "../components/Services";
+import { LoadingOverlay } from "../components/LoadingOverlay";
+import { LabelError } from "../components/LabelError";
+import { useRequestFindMany } from "../hooks/useRequestFindMany";
+import { useRequestFindOne } from "../hooks/useRequestFindOne";
+import { handleTimeSlots } from "../hooks/useTimeSlots";
+import { useRequestCreate } from "../hooks/useRequestCreate";
+import { transformTime } from "../hooks/useTransformTime";
+import { calculateTotalAverageTime } from "../utils/calculateAverageTime";
+import { maskTextCellPhone } from "../hooks/maskText";
 
-//import "dayjs/locale/ptBr"
-import ptBR from "date-fns/locale/pt-BR";
-import { DemoContainer, DemoItem } from "@mui/x-date-pickers/internals/demo";
-import { DesktopDatePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { IMaskInput } from "react-imask";
+export type DayNames =
+  | "DOMINGO"
+  | "SEGUNDA-FEIRA"
+  | "TERÇA-FEIRA"
+  | "QUARTA-FEIRA"
+  | "QUINTA-FEIRA"
+  | "SEXTA-FEIRA"
+  | "SABADO";
 
 export interface Account {
   id: string;
@@ -53,32 +60,54 @@ export interface Account {
       sex: boolean;
       sab: boolean;
     };
+    weekHours: { [key: string]: string[][] };
   };
 }
 export interface Service {
   id: string;
   name: string;
   price: string;
+  averageTime: string;
+}
+
+export interface Schedules {
+  id: string;
+  scheduleAt: string;
+  shortName: string;
+  user: { name: string };
+  averageTime: number;
+  status: string;
 }
 
 interface Fields {
   name: string;
   cellPhone: string;
   date: Date;
-  services: string[];
+  services: Service[];
   hour: string;
   onChange: (event: { target: { cellPhone: string; value: string } }) => void;
 }
 
+const daysOfWeek: DayNames[] = [
+  "DOMINGO",
+  "SEGUNDA-FEIRA",
+  "TERÇA-FEIRA",
+  "QUARTA-FEIRA",
+  "QUINTA-FEIRA",
+  "SEXTA-FEIRA",
+  "SABADO",
+];
+
 export function Home() {
   const params = useParams<{ id: string }>();
-  const alert = useAlert();
 
   const validationSchema = Yup.object({
-    name: Yup.string().required("O nome é obrigatório"),
-    cellPhone: Yup.string().required("O telefone é obrigatório"),
-    date: Yup.string().required("A data é obrigatória"),
-    hour: Yup.string().required("A hora é obrigatória"),
+    name: Yup.string().required("O campo nome é obrigatório"),
+    cellPhone: Yup.string()
+      .required("O campo telefone é obrigatório")
+      .matches(/^\(\d{2}\) \d{4,5}-\d{4}$/, "Formato inválido"),
+    date: Yup.string().required("Selecione uma data"),
+    hour: Yup.string().required("Selecione um horário"),
     services: Yup.array().min(1, "Selecione pelo menos um serviço"),
   });
 
@@ -109,15 +138,17 @@ export function Home() {
 
       const payload = {
         shortName: values.name,
-        cellPhone: values.cellPhone,
-        services: values.services.map((serviceId) => ({
-          id: serviceId,
+        cellPhone: values.cellPhone.replace(/\D/g, ""),
+        services: values.services.map((service) => ({
+          id: service.id,
           isPackage: false,
         })),
         scheduleAt,
+        averageTime: calculateTotalAverageTime(values.services),
       };
 
       execCreateSchedules(payload);
+      toast.success("Agendamento realizado com sucesso");
     },
   });
 
@@ -142,7 +173,7 @@ export function Home() {
     response: responseSchedules,
     loading: loadingSchedules,
     execute: execSchedules,
-  } = useRequestFindMany<{ id: string; scheduleAt: string }>({
+  } = useRequestFindMany<Schedules>({
     path: `/public/account/${params.id}/schedules`,
     defaultQuery: {
       where: {
@@ -175,50 +206,52 @@ export function Home() {
   useEffect(() => {
     if (responseCreated) {
       formik.resetForm();
-      alert.success("Agendamento criado com sucesso!");
+
       execSchedules();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [responseCreated]);
 
-  const startAt = useTransformTime({
-    time: responseAccount?.config.startAt
-      ? responseAccount?.config.startAt
-      : "07:00",
+  const daySelected = formik?.values?.date
+    ? getDay(formik.values.date)
+    : getDay(new Date());
+
+  const dayWeek: DayNames = daysOfWeek[daySelected];
+  const enableDays: { [key: string]: boolean } =
+    responseAccount?.config?.days || {};
+  const hours = responseAccount?.config?.weekHours?.[dayWeek] || [];
+
+  const schedulesWithUserName = (responseSchedules || [])
+    .filter((item) => item.status !== "canceled")
+    .map((item) => ({
+      time: format(new Date(item.scheduleAt), "HH:mm"),
+      username: item?.shortName || item?.user?.name || "",
+    }));
+
+  const slots = hours.map((item) => {
+    const [startAt, endAt] = item;
+
+    const startTime = transformTime({ time: startAt });
+    const endTime = transformTime({ time: endAt });
+
+    const schedulesHours = (responseSchedules || [])
+      .filter((item) => item.status !== "canceled")
+      .map((item) => ({
+        scheduleAt: format(new Date(item.scheduleAt), "HH:mm"),
+        averageTime: item.averageTime,
+      }));
+
+    const { timeSlots } = handleTimeSlots({
+      payload: schedulesHours,
+      startAt: startTime,
+      endAt: endTime,
+    });
+
+    return timeSlots;
   });
 
-  const endAt = useTransformTime({
-    time: responseAccount?.config.endAt
-      ? responseAccount?.config.endAt
-      : "20:00",
-  });
-
-  const { timeSlots } = useTimeSlots({
-    payload: (responseSchedules || []).map((item) =>
-      format(new Date(item.scheduleAt), "HH:mm")
-    ),
-    startAt,
-    endAt,
-  });
-
-  const TextMaskCustom = React.forwardRef<HTMLInputElement, Fields>(
-    function TextMaskCustom(props, ref) {
-      const { onChange, ...other } = props;
-      return (
-        <IMaskInput
-          {...other}
-          mask="(00) 00000-0000"
-          inputRef={ref}
-          name="cellPhone"
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onAccept={(value: any) =>
-            onChange({ target: { cellPhone: props.cellPhone, value } })
-          }
-          overwrite
-        />
-      );
-    }
-  );
+  const timeDataSlots =
+    Array.isArray(slots) && slots.length ? [...slots[0], ...slots[1]] : [];
 
   return (
     <Container>
@@ -229,6 +262,7 @@ export function Home() {
               paddingBottom: 5,
               margin: "auto",
               display: "block",
+              height: 60,
             }}
             src="src/assets/meu-petrecho.png"
           />
@@ -267,63 +301,104 @@ export function Home() {
               />
               <LabelError message={formik.errors.name} />
               <TextField
-                id="formatted-cellPhone"
-                name="cellPhone"
                 label="Telefone"
-                placeholder="Digite seu telefone"
-                color="primary"
+                name="cellPhone"
                 value={formik.values.cellPhone}
-                //onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                InputProps={{
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  inputComponent: TextMaskCustom as any,
+                onChange={(event) => {
+                  const { value } = event.target;
+                  formik.setFieldValue("cellPhone", maskTextCellPhone(value));
                 }}
+                color="primary"
+                placeholder="Digite seu telefone"
               />
               <LabelError message={formik.errors.cellPhone} />
 
-              <LocalizationProvider
-                dateAdapter={AdapterDateFns}
-                adapterLocale={ptBR}
-              >
-                <DemoContainer components={["DesktopDatePicker"]}>
-                  <DemoItem>
-                    <DesktopDatePicker
-                      label="Dia do agendamento"
-                      name="date"
-                      value={formik.values.date}
-                      //format="DD/MMMM/YYYY"
-                      onChange={(date) =>
-                        date && formik.setFieldValue("date", date)
-                      }
-                    ></DesktopDatePicker>
-                  </DemoItem>
-                </DemoContainer>
-              </LocalizationProvider>
+              <div style={styles.container}>
+                <div style={styles.content}>
+                  {Array.from({ length: 7 }).map((_, index) => {
+                    const currentDay = new Date().getDay();
+
+                    const dia =
+                      currentDay + index < 7
+                        ? currentDay + index
+                        : currentDay + index - 7;
+
+                    const data = format(addDays(new Date(), index), "dd");
+                    const dayName = daysOfWeek[dia].slice(0, 3);
+
+                    if (enableDays[dayName.toLocaleLowerCase()] === false)
+                      return null;
+
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => {
+                          if (!enableDays[dayName.toLocaleLowerCase()]) return;
+                          formik.setFieldValue(
+                            "date",
+                            addDays(new Date(), index)
+                          );
+                        }}
+                        style={{
+                          ...styles.days,
+                          color:
+                            formik.values.date?.getDate() ===
+                            addDays(new Date(), index).getDate()
+                              ? "white"
+                              : "",
+                          background:
+                            formik.values.date?.getDate() ===
+                            addDays(new Date(), index).getDate()
+                              ? "green"
+                              : enableDays[dayName.toLocaleLowerCase()] ===
+                                false
+                              ? "red"
+                              : " ",
+                        }}
+                      >
+                        <span>{dayName}</span>
+                        <span>{data}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <Hours
-                items={timeSlots}
+                items={timeDataSlots}
                 value={formik.values.hour}
                 onSelect={(item) => formik.setFieldValue("hour", item)}
+                schedulesWithUserName={schedulesWithUserName}
               />
               <LabelError message={formik.errors.hour} />
+
               <Services
                 values={formik.values.services}
                 services={responseServices || []}
-                onSelect={(serviceId: string) => {
-                  const services = formik.values.services.includes(serviceId)
-                    ? formik.values.services.filter((id) => id !== serviceId)
-                    : [...formik.values.services, serviceId];
+                onSelect={(service) => {
+                  const services = formik.values.services.some(
+                    (item) => item.id === service.id
+                  )
+                    ? formik.values.services.filter(
+                        (item) => item.id !== service.id
+                      )
+                    : [...formik.values.services, service];
                   formik.setFieldValue("services", services);
                 }}
               />
               <LabelError message={formik.errors.services} />
-              <Button
-                variant="contained"
-                type="submit"
-                disabled={loadingCreateSchedule}
-              >
-                Agendar
-              </Button>
+              <Container sx={{ textAlign: "center" }}>
+                <Button
+                  variant="contained"
+                  type="submit"
+                  disabled={loadingCreateSchedule}
+                  size="large"
+                  fullWidth
+                  sx={{ fontWeight: "bold", fontSize: 22 }}
+                >
+                  Agendar
+                </Button>
+              </Container>
             </form>
           </CardContent>
         </Card>
@@ -331,3 +406,28 @@ export function Home() {
     </Container>
   );
 }
+
+const styles: { [key: string]: CSSProperties } = {
+  container: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  days: {
+    border: "1px solid",
+    borderRadius: "10px",
+    width: "60px",
+    height: "80px",
+    cursor: "pointe",
+    display: "flex",
+    justifyContent: "center",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+};

@@ -2,7 +2,7 @@ interface Props {
   time: string;
 }
 
-export const useTransformTime = ({ time }: Props) => {
+export const transformTime = ({ time }: Props) => {
   const parts = time.split(":");
   const horas = parseInt(parts[0], 10);
   const minutos = parseInt(parts[1], 10);
