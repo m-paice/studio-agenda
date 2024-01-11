@@ -297,7 +297,7 @@ export function Home() {
                 value={formik.values.name}
                 onChange={formik.handleChange}
                 color="primary"
-                placeholder="Digite o nome"
+                placeholder="Digite seu nome"
               />
               <LabelError message={formik.errors.name} />
               <TextField
@@ -326,8 +326,8 @@ export function Home() {
                     const data = format(addDays(new Date(), index), "dd");
                     const dayName = daysOfWeek[dia].slice(0, 3);
 
-                    if (enableDays[dayName.toLocaleLowerCase()] === false)
-                      return null;
+                    // if (enableDays[dayName.toLocaleLowerCase()] === false)
+                    //   return null;
 
                     return (
                       <div
@@ -412,6 +412,7 @@ const styles: { [key: string]: CSSProperties } = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "column",
   },
   content: {
     display: "flex",
