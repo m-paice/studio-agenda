@@ -14,9 +14,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { blue, pink } from "@mui/material/colors";
 import {
-  Box,
   Button,
-  Card,
   CardContent,
   CardHeader,
   Container,
@@ -85,7 +83,6 @@ interface Fields {
   date: Date;
   services: Service[];
   hour: string;
-  onChange: (event: { target: { cellPhone: string; value: string } }) => void;
 }
 
 const daysOfWeek: DayNames[] = [
@@ -118,12 +115,6 @@ export function Home() {
       date: new Date(),
       services: [],
       hour: "",
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      onChange: function (event: {
-        target: { cellPhone: string; value: string };
-      }): void {
-        throw new Error("Function not implemented.");
-      },
     },
     validationSchema: validationSchema,
     onSubmit: (values) => {
@@ -254,155 +245,151 @@ export function Home() {
     Array.isArray(slots) && slots.length ? [...slots[0], ...slots[1]] : [];
 
   return (
-    <Container>
-      <Box sx={{ paddingTop: 3, backgroundColor: "#003049" }}>
-        <Box>
-          <img
-            style={{
-              paddingBottom: 5,
-              margin: "auto",
-              display: "block",
-              height: 60,
-            }}
-            src="src/assets/meu-petrecho.png"
-          />
-        </Box>
-        <Card>
-          <LoadingOverlay
-            visible={
-              loadingAccount ||
-              loadingSchedules ||
-              loadingServices ||
-              loadingCreateSchedule
-            }
-          />
-          <CardHeader
-            title="Faça seu agendamento"
-            sx={{
-              fontSize: 18,
-              backgroundColor: pink[900],
-              color: blue[50],
-              alignItems: "center",
-              justifyContent: "center",
-              textAlign: "center",
-            }}
-          />
-          <CardContent>
-            <Header name={responseAccount?.name} />
+    <Container sx={{ backgroundColor: "#003049" }}>
+      <LoadingOverlay
+        visible={
+          loadingAccount ||
+          loadingSchedules ||
+          loadingServices ||
+          loadingCreateSchedule
+        }
+      />
+      <img
+        style={{
+          paddingBottom: 5,
+          margin: "auto",
+          display: "block",
+          height: 60,
+        }}
+        src="../../public/meu-petrecho.png"
+      />
 
-            <form onSubmit={formik.handleSubmit}>
-              <TextField
-                label="Nome"
-                name="name"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                color="primary"
-                placeholder="Digite seu nome"
-              />
-              <LabelError message={formik.errors.name} />
-              <TextField
-                label="Telefone"
-                name="cellPhone"
-                value={formik.values.cellPhone}
-                onChange={(event) => {
-                  const { value } = event.target;
-                  formik.setFieldValue("cellPhone", maskTextCellPhone(value));
-                }}
-                color="primary"
-                placeholder="Digite seu telefone"
-              />
-              <LabelError message={formik.errors.cellPhone} />
+      <div style={{ background: "#fff" }}>
+        <CardHeader
+          title="Faça seu agendamento"
+          sx={{
+            fontSize: 18,
+            backgroundColor: pink[900],
+            color: blue[50],
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
+        />
+        <CardContent>
+          <Header name={responseAccount?.name} />
 
-              <div style={styles.container}>
-                <div style={styles.content}>
-                  {Array.from({ length: 7 }).map((_, index) => {
-                    const currentDay = new Date().getDay();
+          <form onSubmit={formik.handleSubmit}>
+            <TextField
+              label="Nome"
+              name="name"
+              value={formik.values.name}
+              onChange={formik.handleChange}
+              color="primary"
+              placeholder="Digite seu nome"
+            />
+            <LabelError message={formik.errors.name} />
+            <TextField
+              label="Telefone"
+              name="cellPhone"
+              value={formik.values.cellPhone}
+              onChange={(event) => {
+                const { value } = event.target;
+                formik.setFieldValue("cellPhone", maskTextCellPhone(value));
+              }}
+              color="primary"
+              placeholder="Digite seu telefone"
+            />
+            <LabelError message={formik.errors.cellPhone} />
 
-                    const dia =
-                      currentDay + index < 7
-                        ? currentDay + index
-                        : currentDay + index - 7;
+            <div style={styles.container}>
+              <div style={styles.content}>
+                {Array.from({ length: 7 }).map((_, index) => {
+                  const currentDay = new Date().getDay();
 
-                    const data = format(addDays(new Date(), index), "dd");
-                    const dayName = daysOfWeek[dia].slice(0, 3);
+                  const dia =
+                    currentDay + index < 7
+                      ? currentDay + index
+                      : currentDay + index - 7;
 
-                    // if (enableDays[dayName.toLocaleLowerCase()] === false)
-                    //   return null;
+                  const data = format(addDays(new Date(), index), "dd");
+                  const dayName = daysOfWeek[dia].slice(0, 3);
 
-                    return (
-                      <div
-                        key={index}
-                        onClick={() => {
-                          if (!enableDays[dayName.toLocaleLowerCase()]) return;
-                          formik.setFieldValue(
-                            "date",
-                            addDays(new Date(), index)
-                          );
-                        }}
-                        style={{
-                          ...styles.days,
-                          color:
-                            formik.values.date?.getDate() ===
-                            addDays(new Date(), index).getDate()
-                              ? "white"
-                              : "",
-                          background:
-                            formik.values.date?.getDate() ===
-                            addDays(new Date(), index).getDate()
-                              ? "green"
-                              : enableDays[dayName.toLocaleLowerCase()] ===
-                                false
-                              ? "red"
-                              : " ",
-                        }}
-                      >
-                        <span>{dayName}</span>
-                        <span>{data}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                  // if (enableDays[dayName.toLocaleLowerCase()] === false)
+                  //   return null;
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        if (!enableDays[dayName.toLocaleLowerCase()]) return;
+                        formik.setFieldValue(
+                          "date",
+                          addDays(new Date(), index)
+                        );
+                      }}
+                      style={{
+                        ...styles.days,
+                        color:
+                          formik.values.date?.getDate() ===
+                          addDays(new Date(), index).getDate()
+                            ? "white"
+                            : "",
+                        background:
+                          formik.values.date?.getDate() ===
+                          addDays(new Date(), index).getDate()
+                            ? "green"
+                            : enableDays[dayName.toLocaleLowerCase()] === false
+                            ? "red"
+                            : " ",
+                      }}
+                    >
+                      <span>{dayName}</span>
+                      <span>{data}</span>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <Hours
-                items={timeDataSlots}
-                value={formik.values.hour}
-                onSelect={(item) => formik.setFieldValue("hour", item)}
-                schedulesWithUserName={schedulesWithUserName}
-              />
-              <LabelError message={formik.errors.hour} />
+            <Hours
+              items={timeDataSlots}
+              value={formik.values.hour}
+              onSelect={(item) => formik.setFieldValue("hour", item)}
+              schedulesWithUserName={schedulesWithUserName}
+            />
+            <LabelError message={formik.errors.hour} />
 
-              <Services
-                values={formik.values.services}
-                services={responseServices || []}
-                onSelect={(service) => {
-                  const services = formik.values.services.some(
-                    (item) => item.id === service.id
-                  )
-                    ? formik.values.services.filter(
-                        (item) => item.id !== service.id
-                      )
-                    : [...formik.values.services, service];
-                  formik.setFieldValue("services", services);
-                }}
-              />
-              <LabelError message={formik.errors.services} />
-              <Container sx={{ textAlign: "center" }}>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  disabled={loadingCreateSchedule}
-                  size="large"
-                  fullWidth
-                  sx={{ fontWeight: "bold", fontSize: 22 }}
-                >
-                  Agendar
-                </Button>
-              </Container>
-            </form>
-          </CardContent>
-        </Card>
-      </Box>
+            <Services
+              values={formik.values.services}
+              services={responseServices || []}
+              onSelect={(service) => {
+                const services = formik.values.services.some(
+                  (item) => item.id === service.id
+                )
+                  ? formik.values.services.filter(
+                      (item) => item.id !== service.id
+                    )
+                  : [...formik.values.services, service];
+                formik.setFieldValue("services", services);
+              }}
+            />
+            <LabelError message={formik.errors.services} />
+            <Container sx={{ textAlign: "center" }}>
+              <Button
+                variant="contained"
+                type="submit"
+                disabled={loadingCreateSchedule}
+                size="large"
+                fullWidth
+                sx={{ fontWeight: "bold", fontSize: 22 }}
+              >
+                Agendar
+              </Button>
+            </Container>
+          </form>
+        </CardContent>
+      </div>
     </Container>
   );
 }
@@ -413,6 +400,8 @@ const styles: { [key: string]: CSSProperties } = {
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "column",
+
+    color: "#000",
   },
   content: {
     display: "flex",
