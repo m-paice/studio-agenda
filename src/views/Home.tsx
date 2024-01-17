@@ -261,7 +261,7 @@ export function Home() {
           display: "block",
           height: 60,
         }}
-        src="../../public/meu-petrecho.png"
+        src="/meu-petrecho.png"
       />
 
       <div style={{ background: "#fff" }}>
