@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
   format,
@@ -7,7 +7,6 @@ import {
   setHours,
   setMinutes,
   getDay,
-  addDays,
 } from "date-fns";
 import { toast } from "react-toastify";
 import { useFormik } from "formik";
@@ -31,59 +30,16 @@ import { useRequestFindOne } from "../hooks/useRequestFindOne";
 import { handleTimeSlots } from "../hooks/useTimeSlots";
 import { useRequestCreate } from "../hooks/useRequestCreate";
 import { transformTime } from "../hooks/useTransformTime";
-import { calculateTotalAverageTime } from "../utils/calculateAverageTime";
 import { maskTextCellPhone } from "../hooks/maskText";
-
-export type DayNames =
-  | "DOMINGO"
-  | "SEGUNDA-FEIRA"
-  | "TERÇA-FEIRA"
-  | "QUARTA-FEIRA"
-  | "QUINTA-FEIRA"
-  | "SEXTA-FEIRA"
-  | "SABADO";
-
-export interface Account {
-  id: string;
-  name: string;
-  config: {
-    startAt: string;
-    endAt: string;
-    days: {
-      dom: boolean;
-      seg: boolean;
-      ter: boolean;
-      qua: boolean;
-      qui: boolean;
-      sex: boolean;
-      sab: boolean;
-    };
-    weekHours: { [key: string]: string[][] };
-  };
-}
-export interface Service {
-  id: string;
-  name: string;
-  price: string;
-  averageTime: string;
-}
-
-export interface Schedules {
-  id: string;
-  scheduleAt: string;
-  shortName: string;
-  user: { name: string };
-  averageTime: number;
-  status: string;
-}
-
-interface Fields {
-  name: string;
-  cellPhone: string;
-  date: Date;
-  services: Service[];
-  hour: string;
-}
+import { calculateTotalAverageTime } from "../utils/calculateAverageTime";
+import type {
+  Account,
+  DayNames,
+  Fields,
+  Schedules,
+  Service,
+} from "../types/home";
+import { Days } from "../components/Days";
 
 const daysOfWeek: DayNames[] = [
   "DOMINGO",
@@ -245,7 +201,7 @@ export function Home() {
     Array.isArray(slots) && slots.length ? [...slots[0], ...slots[1]] : [];
 
   return (
-    <Container sx={{ backgroundColor: "#003049" }}>
+    <div style={{ backgroundColor: "#003049" }}>
       <LoadingOverlay
         visible={
           loadingAccount ||
@@ -302,61 +258,18 @@ export function Home() {
             />
             <LabelError message={formik.errors.cellPhone} />
 
-            <div style={styles.container}>
-              <div style={styles.content}>
-                {Array.from({ length: 7 }).map((_, index) => {
-                  const currentDay = new Date().getDay();
-
-                  const dia =
-                    currentDay + index < 7
-                      ? currentDay + index
-                      : currentDay + index - 7;
-
-                  const data = format(addDays(new Date(), index), "dd");
-                  const dayName = daysOfWeek[dia].slice(0, 3);
-
-                  // if (enableDays[dayName.toLocaleLowerCase()] === false)
-                  //   return null;
-
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        if (!enableDays[dayName.toLocaleLowerCase()]) return;
-                        formik.setFieldValue(
-                          "date",
-                          addDays(new Date(), index)
-                        );
-                      }}
-                      style={{
-                        ...styles.days,
-                        color:
-                          formik.values.date?.getDate() ===
-                          addDays(new Date(), index).getDate()
-                            ? "white"
-                            : "",
-                        background:
-                          formik.values.date?.getDate() ===
-                          addDays(new Date(), index).getDate()
-                            ? "green"
-                            : enableDays[dayName.toLocaleLowerCase()] === false
-                            ? "red"
-                            : " ",
-                      }}
-                    >
-                      <span>{dayName}</span>
-                      <span>{data}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <Days
+              daysOfWeek={daysOfWeek}
+              enableDays={enableDays}
+              formik={formik}
+            />
 
             <Hours
               items={timeDataSlots}
               value={formik.values.hour}
               onSelect={(item) => formik.setFieldValue("hour", item)}
               schedulesWithUserName={schedulesWithUserName}
+              daySelected={formik.values.date}
             />
             <LabelError message={formik.errors.hour} />
 
@@ -390,34 +303,6 @@ export function Home() {
           </form>
         </CardContent>
       </div>
-    </Container>
+    </div>
   );
 }
-
-const styles: { [key: string]: CSSProperties } = {
-  container: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-
-    color: "#000",
-  },
-  content: {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    justifyContent: "center",
-  },
-  days: {
-    border: "1px solid",
-    borderRadius: "10px",
-    width: "60px",
-    height: "80px",
-    cursor: "pointe",
-    display: "flex",
-    justifyContent: "center",
-    flexDirection: "column",
-    alignItems: "center",
-  },
-};

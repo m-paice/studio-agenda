@@ -1,4 +1,4 @@
-import { Service } from "../views/Home";
+import { Service } from "../types/home";
 
 export function calculateTotalAverageTime(services: Service[]) {
   return services.reduce(

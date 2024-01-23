@@ -1,5 +1,4 @@
-import { Service } from "../../views/Home";
-
+import { Service } from "../../types/home";
 import "./styles.css";
 
 interface Props {

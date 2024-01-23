@@ -1,4 +1,5 @@
 import { TimeSlotsItem } from "../../hooks/useTimeSlots";
+import { isCurrentTimeBefore } from "../../utils/currentTimeBefore";
 
 import "./styles.css";
 
@@ -7,6 +8,7 @@ interface Props {
   value: string;
   onSelect(item: string): void;
   schedulesWithUserName: { time: string; username: string }[];
+  daySelected: Date;
 }
 
 export function Hours({
@@ -14,6 +16,7 @@ export function Hours({
   value,
   onSelect,
   schedulesWithUserName,
+  daySelected,
 }: Props) {
   return (
     <div className="container-hour">
@@ -33,15 +36,24 @@ export function Hours({
             ? schedule.username.split(" ")
             : ["", ""];
 
+          const result =
+            daySelected > new Date() ? true : isCurrentTimeBefore(item.time);
+
           return (
             <button
               key={item.time}
               type="button"
               className={
-                item.schedule ? "danger" : item.time === value ? "success" : ""
+                item.schedule
+                  ? "danger"
+                  : item.time === value
+                  ? "success"
+                  : !result
+                  ? "notScheduled"
+                  : ""
               }
               onClick={() => {
-                if (!item.schedule) onSelect(item.time);
+                if (!item.schedule && result) onSelect(item.time);
               }}
               style={{ fontSize: 18 }}
             >
