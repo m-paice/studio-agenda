@@ -36,7 +36,7 @@ export interface Schedules {
   id: string;
   scheduleAt: string;
   shortName: string;
-  user: { name: string };
+  user: { name: string; cellPhone: string };
   averageTime: number;
   status: string;
 }

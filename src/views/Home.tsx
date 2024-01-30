@@ -40,6 +40,8 @@ import type {
   Service,
 } from "../types/home";
 import { Days } from "../components/Days";
+import { Modal } from "../components/Modal";
+import { useToggle } from "../hooks/useToggle";
 
 const daysOfWeek: DayNames[] = [
   "DOMINGO",
@@ -54,6 +56,8 @@ const daysOfWeek: DayNames[] = [
 export function Home() {
   const params = useParams<{ id: string }>();
 
+  const { toggle, onChangeToggle } = useToggle();
+
   const validationSchema = Yup.object({
     name: Yup.string().required("O campo nome é obrigatório"),
     cellPhone: Yup.string()
@@ -66,8 +70,8 @@ export function Home() {
 
   const formik = useFormik<Fields>({
     initialValues: {
-      name: "",
-      cellPhone: "",
+      name: localStorage.getItem("name") ?? "",
+      cellPhone: localStorage.getItem("cellPhone") ?? "",
       date: new Date(),
       services: [],
       hour: "",
@@ -96,8 +100,24 @@ export function Home() {
 
       execCreateSchedules(payload);
       toast.success("Agendamento realizado com sucesso");
+
+      if (
+        !localStorage.getItem("cellPhone") ||
+        localStorage.getItem("cellPhone") !== values.cellPhone
+      ) {
+        onChangeToggle();
+        localStorage.setItem("name", values.name);
+        localStorage.setItem("cellPhone", values.cellPhone);
+      }
     },
   });
+
+  const handleResetLocal = () => {
+    localStorage.removeItem("name");
+    localStorage.removeItem("cellPhone");
+
+    onChangeToggle();
+  };
 
   const {
     execute: execAccount,
@@ -131,6 +151,9 @@ export function Home() {
           ],
         },
       },
+      ...(localStorage.getItem("cellPhone") && {
+        me: localStorage.getItem("cellPhone").replace(/\D/g, ""),
+      }),
     },
   });
 
@@ -173,6 +196,7 @@ export function Home() {
     .map((item) => ({
       time: format(new Date(item.scheduleAt), "HH:mm"),
       username: item?.shortName || item?.user?.name || "",
+      cellPhone: item.user.cellPhone,
     }));
 
   const slots = hours.map((item) => {
@@ -303,6 +327,22 @@ export function Home() {
           </form>
         </CardContent>
       </div>
+
+      <Modal
+        title="Agendamento realizado com sucesso!"
+        subTitle="Deseja salvar esse nome e telefone para reutilizar novamente ?"
+        isActive={toggle}
+        handleCancel={handleResetLocal}
+        handleConfirm={onChangeToggle}
+      />
+
+      <Modal
+        title="Cancelamento de agendamento"
+        subTitle="Deseja cancelar esse agendamento?"
+        isActive={false}
+        handleCancel={() => {}}
+        handleConfirm={() => {}}
+      />
     </div>
   );
 }

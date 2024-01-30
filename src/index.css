@@ -92,6 +92,12 @@ button.notScheduled {
   color: white;
 }
 
+button.meSchedule {
+  background-color: #646cff;
+  border-color: white;
+  color: white;
+}
+
 button:hover {
   border-color: #646cff;
 }

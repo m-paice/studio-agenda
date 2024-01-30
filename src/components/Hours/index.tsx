@@ -7,7 +7,11 @@ interface Props {
   items: TimeSlotsItem[];
   value: string;
   onSelect(item: string): void;
-  schedulesWithUserName: { time: string; username: string }[];
+  schedulesWithUserName: {
+    time: string;
+    username: string;
+    cellPhone: string;
+  }[];
   daySelected: Date;
 }
 
@@ -36,6 +40,11 @@ export function Hours({
             ? schedule.username.split(" ")
             : ["", ""];
 
+          const meSchedule = localStorage.getItem("cellPhone")
+            ? localStorage.getItem("cellPhone").replace(/\D/g, "") ===
+              schedule?.cellPhone
+            : false;
+
           const result =
             daySelected > new Date() ? true : isCurrentTimeBefore(item.time);
 
@@ -44,7 +53,9 @@ export function Hours({
               key={item.time}
               type="button"
               className={
-                item.schedule
+                meSchedule
+                  ? "meSchedule"
+                  : item.schedule
                   ? "danger"
                   : item.time === value
                   ? "success"
@@ -54,6 +65,9 @@ export function Hours({
               }
               onClick={() => {
                 if (!item.schedule && result) onSelect(item.time);
+                if (meSchedule) {
+                  // salvar o id do agendamento que o usuario clicou
+                }
               }}
               style={{ fontSize: 18 }}
             >
