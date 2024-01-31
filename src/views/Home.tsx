@@ -60,6 +60,7 @@ export function Home() {
   const { toggle, onChangeToggle } = useToggle();
 
   const [isOpenModal, setIsOpenModal] = useState<boolean>(false);
+  const [scheduleIdSelected, setScheduleIdSelected] = useState<string>("");
 
   const validationSchema = Yup.object({
     name: Yup.string().required("O campo nome é obrigatório"),
@@ -166,11 +167,12 @@ export function Home() {
     response: responseCreated,
   } = useRequestCreate({ path: `/public/account/${params.id}/schedules` });
 
-  const { execute: destroy } = useRequestDestroy<Schedules>({
-    path: ` /schedule/cancel/${params.id}`,
-    callbackSucess: () => {
+  const { execute: destroy } = useRequestDestroy({
+    path: "/public/schedule/cancel",
+    callbackSuccess: () => {
       toast.success("Agendamento cancelado com sucesso");
       setIsOpenModal(false);
+      execSchedules();
     },
   });
 
@@ -236,13 +238,14 @@ export function Home() {
   const timeDataSlots =
     Array.isArray(slots) && slots.length ? [...slots[0], ...slots[1]] : [];
 
-  const handleConfirmCancellation = (id: string) => {
-    console.log("Confirmar cancelamento de agendamento");
-    destroy(id);
+  const handleConfirmCancellation = () => {
+    destroy(scheduleIdSelected);
   };
 
-  const handleCancelCancellation = () => {
-    setIsOpenModal(false);
+  const handleOpenMeSchedule = (id: string) => {
+    setIsOpenModal(true);
+
+    setScheduleIdSelected(id);
   };
 
   return (
@@ -315,7 +318,7 @@ export function Home() {
               onSelect={(item) => formik.setFieldValue("hour", item)}
               schedulesWithUserName={schedulesWithUserName}
               daySelected={formik.values.date}
-              setIsModalOpen={setIsOpenModal}
+              handleOpenMeSchedule={handleOpenMeSchedule}
             />
             <LabelError message={formik.errors.hour} />
 
@@ -358,15 +361,13 @@ export function Home() {
         handleConfirm={onChangeToggle}
       />
 
-      {isOpenModal && (
-        <Modal
-          title="Cancelamento de agendamento"
-          subTitle="Deseja cancelar esse agendamento?"
-          isActive={setIsOpenModal}
-          handleCancel={handleCancelCancellation}
-          handleConfirm={() => {}}
-        />
-      )}
+      <Modal
+        title="Cancelamento de agendamento"
+        subTitle="Deseja cancelar esse agendamento?"
+        isActive={isOpenModal}
+        handleCancel={() => setIsOpenModal(false)}
+        handleConfirm={handleConfirmCancellation}
+      />
     </div>
   );
 }
