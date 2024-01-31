@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   format,
@@ -29,6 +29,7 @@ import { useRequestFindMany } from "../hooks/useRequestFindMany";
 import { useRequestFindOne } from "../hooks/useRequestFindOne";
 import { handleTimeSlots } from "../hooks/useTimeSlots";
 import { useRequestCreate } from "../hooks/useRequestCreate";
+import { useRequestDestroy } from "../hooks/useRequestDestroy";
 import { transformTime } from "../hooks/useTransformTime";
 import { maskTextCellPhone } from "../hooks/maskText";
 import { calculateTotalAverageTime } from "../utils/calculateAverageTime";
@@ -57,6 +58,8 @@ export function Home() {
   const params = useParams<{ id: string }>();
 
   const { toggle, onChangeToggle } = useToggle();
+
+  const [isOpenModal, setIsOpenModal] = useState<boolean>(false);
 
   const validationSchema = Yup.object({
     name: Yup.string().required("O campo nome é obrigatório"),
@@ -163,6 +166,14 @@ export function Home() {
     response: responseCreated,
   } = useRequestCreate({ path: `/public/account/${params.id}/schedules` });
 
+  const { execute: destroy } = useRequestDestroy<Schedules>({
+    path: ` /schedule/cancel/${params.id}`,
+    callbackSucess: () => {
+      toast.success("Agendamento cancelado com sucesso");
+      setIsOpenModal(false);
+    },
+  });
+
   useEffect(() => {
     execServices();
     execAccount();
@@ -197,6 +208,7 @@ export function Home() {
       time: format(new Date(item.scheduleAt), "HH:mm"),
       username: item?.shortName || item?.user?.name || "",
       cellPhone: item.user.cellPhone,
+      id: item.id,
     }));
 
   const slots = hours.map((item) => {
@@ -223,6 +235,15 @@ export function Home() {
 
   const timeDataSlots =
     Array.isArray(slots) && slots.length ? [...slots[0], ...slots[1]] : [];
+
+  const handleConfirmCancellation = (id: string) => {
+    console.log("Confirmar cancelamento de agendamento");
+    destroy(id);
+  };
+
+  const handleCancelCancellation = () => {
+    setIsOpenModal(false);
+  };
 
   return (
     <div style={{ backgroundColor: "#003049" }}>
@@ -294,6 +315,7 @@ export function Home() {
               onSelect={(item) => formik.setFieldValue("hour", item)}
               schedulesWithUserName={schedulesWithUserName}
               daySelected={formik.values.date}
+              setIsModalOpen={setIsOpenModal}
             />
             <LabelError message={formik.errors.hour} />
 
@@ -336,13 +358,15 @@ export function Home() {
         handleConfirm={onChangeToggle}
       />
 
-      <Modal
-        title="Cancelamento de agendamento"
-        subTitle="Deseja cancelar esse agendamento?"
-        isActive={false}
-        handleCancel={() => {}}
-        handleConfirm={() => {}}
-      />
+      {isOpenModal && (
+        <Modal
+          title="Cancelamento de agendamento"
+          subTitle="Deseja cancelar esse agendamento?"
+          isActive={setIsOpenModal}
+          handleCancel={handleCancelCancellation}
+          handleConfirm={() => {}}
+        />
+      )}
     </div>
   );
 }

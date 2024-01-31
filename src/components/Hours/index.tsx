@@ -1,3 +1,4 @@
+import React from "react";
 import { TimeSlotsItem } from "../../hooks/useTimeSlots";
 import { isCurrentTimeBefore } from "../../utils/currentTimeBefore";
 
@@ -11,8 +12,10 @@ interface Props {
     time: string;
     username: string;
     cellPhone: string;
+    id: string;
   }[];
   daySelected: Date;
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function Hours({
@@ -21,6 +24,7 @@ export function Hours({
   onSelect,
   schedulesWithUserName,
   daySelected,
+  setIsModalOpen,
 }: Props) {
   return (
     <div className="container-hour">
@@ -64,9 +68,12 @@ export function Hours({
                   : ""
               }
               onClick={() => {
+                setIsModalOpen(true);
                 if (!item.schedule && result) onSelect(item.time);
                 if (meSchedule) {
                   // salvar o id do agendamento que o usuario clicou
+                  schedule?.id;
+                  console.log("ScheduleID ==> ", schedule?.id);
                 }
               }}
               style={{ fontSize: 18 }}
