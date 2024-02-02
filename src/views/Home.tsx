@@ -33,6 +33,7 @@ import { useRequestDestroy } from "../hooks/useRequestDestroy";
 import { transformTime } from "../hooks/useTransformTime";
 import { maskTextCellPhone } from "../hooks/maskText";
 import { calculateTotalAverageTime } from "../utils/calculateAverageTime";
+import { someMinutes } from "../utils/someMinutes";
 import type {
   Account,
   DayNames,
@@ -115,6 +116,36 @@ export function Home() {
       }
     },
   });
+
+  useEffect(() => {
+    const { services, hour, date } = formik.values;
+
+    if (services.length > 1 && hour) {
+      const nextTime = someMinutes(hour, 30);
+      const [nextHour, nextMinute] = nextTime.split(":");
+
+      const nextScheduleAt = new Date(
+        format(
+          setMinutes(setHours(date, Number(nextHour)), Number(nextMinute)),
+          "YYY/MM/dd HH:mm:ss"
+        )
+      );
+
+      if (
+        responseSchedules?.some((item) => {
+          const nextTime = format(nextScheduleAt, "HH:mm");
+          const scheduleItem = format(new Date(item.scheduleAt), "HH:mm");
+
+          return nextTime === scheduleItem;
+        })
+      ) {
+        formik.setFieldError("hour", "Horário não disponível");
+        formik.setFieldValue("hour", "");
+
+        alert("Horário não disponível para os serviços selecionados");
+      }
+    }
+  }, [formik.values]);
 
   const handleResetLocal = () => {
     localStorage.removeItem("name");
