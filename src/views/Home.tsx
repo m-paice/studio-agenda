@@ -133,6 +133,8 @@ export function Home() {
 
       if (
         responseSchedules?.some((item) => {
+          if (item.status === "canceled") return false;
+
           const nextTime = format(nextScheduleAt, "HH:mm");
           const scheduleItem = format(new Date(item.scheduleAt), "HH:mm");
 
