@@ -44,8 +44,10 @@ export function Hours({
             : ["", ""];
 
           const meSchedule = localStorage.getItem("cellPhone")
-            ? localStorage.getItem("cellPhone").replace(/\D/g, "") ===
-              schedule?.cellPhone
+            ? (localStorage.getItem("cellPhone") as string).replace(
+                /\D/g,
+                ""
+              ) === schedule?.cellPhone
             : false;
 
           const result =

@@ -156,7 +156,7 @@ export function Home() {
         },
       },
       ...(localStorage.getItem("cellPhone") && {
-        me: localStorage.getItem("cellPhone").replace(/\D/g, ""),
+        me: (localStorage.getItem("cellPhone") as string).replace(/\D/g, ""),
       }),
     },
   });

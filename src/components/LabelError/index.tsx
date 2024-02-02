@@ -1,7 +1,7 @@
 import "./index.css";
 
 interface Props {
-  message: string;
+  message: any;
 }
 
 export function LabelError({ message }: Props) {
