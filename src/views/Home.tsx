@@ -200,7 +200,7 @@ export function Home() {
     response: responseCreated,
   } = useRequestCreate({ path: `/public/account/${params.id}/schedules` });
 
-  const { execute: destroy } = useRequestDestroy({
+  const { execute: destroy, error } = useRequestDestroy({
     path: "/public/schedule/cancel",
     callbackSuccess: () => {
       toast.success("Agendamento cancelado com sucesso");
@@ -213,6 +213,11 @@ export function Home() {
     execServices();
     execAccount();
   }, []);
+
+  useEffect(() => {
+    if (error)
+      toast.error("Você não pode cancelar um agendamento com menos de 1h");
+  }, [error]);
 
   useEffect(() => {
     execSchedules();

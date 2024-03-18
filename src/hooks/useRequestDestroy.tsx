@@ -15,6 +15,7 @@ export function useRequestDestroy({ path, callbackSuccess }: Props) {
 
   const execute = (id: string) => {
     setLoading(true);
+    setError(false);
 
     api()
       .delete(`${path}/${id}`)
