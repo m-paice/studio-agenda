@@ -104,7 +104,6 @@ export function Home() {
       };
 
       execCreateSchedules(payload);
-      toast.success("Agendamento realizado com sucesso");
 
       if (
         !localStorage.getItem("cellPhone") ||
@@ -198,6 +197,7 @@ export function Home() {
     execute: execCreateSchedules,
     loading: loadingCreateSchedule,
     response: responseCreated,
+    error: errorCreateSchedule,
   } = useRequestCreate({ path: `/public/account/${params.id}/schedules` });
 
   const { execute: destroy, error } = useRequestDestroy({
@@ -210,6 +210,12 @@ export function Home() {
   });
 
   useEffect(() => {
+    if (responseCreated) {
+      toast.success("Agendamento realizado com sucesso");
+    }
+  }, [responseCreated]);
+
+  useEffect(() => {
     execServices();
     execAccount();
   }, []);
@@ -217,7 +223,13 @@ export function Home() {
   useEffect(() => {
     if (error)
       toast.error("Você não pode cancelar um agendamento com menos de 1h");
-  }, [error]);
+
+    if (errorCreateSchedule) {
+      toast.error("Já existe um agendamento para este horário.");
+      execSchedules();
+      formik.setFieldValue("hour", "");
+    }
+  }, [error, errorCreateSchedule]);
 
   useEffect(() => {
     execSchedules();
